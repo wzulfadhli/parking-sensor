@@ -75,10 +75,9 @@
         body {
             background: var(--bg-color);
             color: var(--text-primary);
+            font-family: 'Inter', sans-serif;
             min-height: 100vh;
-            padding: 20px;
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            transition: background 0.3s ease, color 0.3s ease;
+            transition: background-color 0.3s, color 0.3s;
         }
 
         .dashboard-container {
@@ -88,9 +87,44 @@
             border-radius: 24px;
             padding: 30px;
             max-width: 1400px;
-
             margin: 0 auto;
             box-shadow: var(--dashboard-shadow);
+        }
+
+        /* --- Mobile Responsive --- */
+        @media (max-width: 768px) {
+            .dashboard-container {
+                padding: 16px;
+                border-radius: 0;
+                border-left: none;
+                border-right: none;
+            }
+
+            .stat-icon {
+                width: 38px !important;
+                height: 38px !important;
+            }
+
+            h1.display-6 {
+                font-size: 1.1rem !important;
+            }
+
+            h2.fw-bold {
+                font-size: 1.6rem !important;
+            }
+
+            .table thead th,
+            .table td {
+                padding: 10px 12px !important;
+                font-size: 0.8rem !important;
+            }
+
+            .refresh-button {
+                bottom: 20px;
+                right: 16px;
+                width: 44px;
+                height: 44px;
+            }
         }
 
         .stats-card {
@@ -431,18 +465,19 @@
     </button>
 
     <div class="dashboard-container">
-        <div class="d-flex justify-content-between align-items-center mb-3">
-            <h1 class="display-6">
-                <i class="bi bi-p-square-fill"></i> Smart Parking Sensor System
-                <span class="badge bg-info ms-2">PWA</span>
+        <!-- Header -->
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+            <h1 class="display-6 mb-0">
+                <i class="bi bi-p-square-fill"></i> Smart Parking
+                <span class="badge bg-info ms-1">PWA</span>
                 <span class="badge bg-secondary ms-1" style="font-size: 0.4em; vertical-align: middle;">DEMO</span>
             </h1>
 
-            <div class="d-flex">
-                <button class="btn btn-outline-secondary me-2" onclick="toggleTheme()" title="Toggle Theme">
+            <div class="d-flex gap-2">
+                <button class="btn btn-outline-secondary" onclick="toggleTheme()" title="Toggle Theme">
                     <i class="bi bi-moon-fill" id="themeIcon"></i>
                 </button>
-                <button class="btn btn-primary me-2" onclick="simulateRandomCar()">
+                <button class="btn btn-primary" onclick="simulateRandomCar()">
                     <i class="bi bi-car-front"></i> <span class="d-none d-sm-inline">Simulate</span>
                 </button>
                 <button class="btn btn-warning" onclick="resetAllBays()">
@@ -454,8 +489,8 @@
 
         <!-- Statistics -->
         <h5 class="mb-3">Summary Statistics</h5>
-        <div class="row mb-4">
-            <div class="col-3">
+        <div class="row g-3 mb-4">
+            <div class="col-6 col-md-3">
                 <div class="card h-100 p-3">
                     <div class="d-flex justify-content-between align-items-start">
                         <div>
@@ -468,7 +503,7 @@
                     </div>
                 </div>
             </div>
-            <div class="col-3">
+            <div class="col-6 col-md-3">
                 <div class="card h-100 p-3">
                     <div class="d-flex justify-content-between align-items-start">
                         <div>
@@ -481,7 +516,7 @@
                     </div>
                 </div>
             </div>
-            <div class="col-3">
+            <div class="col-6 col-md-3">
                 <div class="card h-100 p-3">
                     <div class="d-flex justify-content-between align-items-start">
                         <div>
@@ -494,7 +529,7 @@
                     </div>
                 </div>
             </div>
-            <div class="col-3">
+            <div class="col-6 col-md-3">
                 <div class="card h-100 p-3">
                     <div class="d-flex justify-content-between align-items-start">
                         <div>
