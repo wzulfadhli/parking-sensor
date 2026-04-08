@@ -1,5 +1,5 @@
-const CACHE_NAME = 'smart-parking-v2';
-const DYNAMIC_CACHE = 'smart-parking-dynamic-v2';
+const CACHE_NAME = 'smart-parking-v3';
+const DYNAMIC_CACHE = 'smart-parking-dynamic-v3';
 
 // Assets to cache on install — use relative paths for GitHub Pages subdirectory hosting
 const STATIC_ASSETS = [
