@@ -40,7 +40,7 @@ function initDatabase() {
     });
 }
 
-// Save data to IndexedDB for offline use
+// Save or update data in IndexedDB
 async function saveOfflineData(storeName, data) {
     if (!db) await initDatabase();
 
@@ -48,16 +48,37 @@ async function saveOfflineData(storeName, data) {
         const transaction = db.transaction([storeName], 'readwrite');
         const store = transaction.objectStore(storeName);
 
-        const request = store.add({
+        // Ensure data has a timestamp
+        const record = {
             ...data,
-            timestamp: new Date().toISOString(),
-            synced: false
-        });
+            timestamp: data.timestamp || new Date().toISOString(),
+            synced: data.synced || false
+        };
 
-        request.onsuccess = () => resolve(request.result);
+        // Use put to update if ID exists, or add new if not
+        const request = store.put(record);
+
+        request.onsuccess = async () => {
+            // Update the original data object with the generated ID if it was new
+            if (!data.id) data.id = request.result;
+
+            // If offline, add to the offline queue for later sync
+            if (!navigator.onLine && storeName !== 'offlineQueue') {
+                await saveOfflineData('offlineQueue', {
+                    action: 'sync',
+                    store: storeName,
+                    dataId: data.id,
+                    data: record
+                });
+            }
+
+            resolve(request.result);
+        };
+
         request.onerror = () => reject(request.error);
     });
 }
+
 
 // Load offline data
 async function loadOfflineData(storeName) {
@@ -75,14 +96,14 @@ async function loadOfflineData(storeName) {
 
 // Parking Bay Configuration
 const bays = [
-    { id: 1, number: 'A01', type: '30min', maxMinutes: 30, sensorId: 'XPERANTI_001', location: 'Level 1' },
-    { id: 2, number: 'A02', type: '30min', maxMinutes: 30, sensorId: 'XPERANTI_002', location: 'Level 1' },
-    { id: 3, number: 'A03', type: '2hour', maxMinutes: 120, sensorId: 'XPERANTI_003', location: 'Level 1' },
-    { id: 4, number: 'A04', type: '2hour', maxMinutes: 120, sensorId: 'XPERANTI_004', location: 'Level 1' },
-    { id: 5, number: 'B01', type: '30min', maxMinutes: 30, sensorId: 'XPERANTI_005', location: 'Level 2' },
-    { id: 6, number: 'B02', type: '30min', maxMinutes: 30, sensorId: 'XPERANTI_006', location: 'Level 2' },
-    { id: 7, number: 'B03', type: '2hour', maxMinutes: 120, sensorId: 'XPERANTI_007', location: 'Level 2' },
-    { id: 8, number: 'B04', type: '2hour', maxMinutes: 120, sensorId: 'XPERANTI_008', location: 'Level 2' }
+    { id: 1, number: 'A01', type: '2min', maxMinutes: 2, sensorId: 'SENSOR_001', location: 'Level 1' },
+    { id: 2, number: 'A02', type: '2min', maxMinutes: 2, sensorId: 'SENSOR_002', location: 'Level 1' },
+    { id: 3, number: 'A03', type: '5min', maxMinutes: 5, sensorId: 'SENSOR_003', location: 'Level 1' },
+    { id: 4, number: 'A04', type: '5min', maxMinutes: 5, sensorId: 'SENSOR_004', location: 'Level 1' },
+    { id: 5, number: 'B01', type: '2min', maxMinutes: 2, sensorId: 'SENSOR_005', location: 'Level 2' },
+    { id: 6, number: 'B02', type: '2min', maxMinutes: 2, sensorId: 'SENSOR_006', location: 'Level 2' },
+    { id: 7, number: 'B03', type: '5min', maxMinutes: 5, sensorId: 'SENSOR_007', location: 'Level 2' },
+    { id: 8, number: 'B04', type: '5min', maxMinutes: 5, sensorId: 'SENSOR_008', location: 'Level 2' }
 ];
 
 // State Management
@@ -116,8 +137,12 @@ async function initializeApp() {
     // Setup background sync
     setupBackgroundSync();
 
+    // Update theme icon on load
+    updateThemeIcon();
+
     showNotification('Smart Parking System Ready', 'success');
 }
+
 
 // Load cached state from IndexedDB
 async function loadCachedState() {
@@ -126,9 +151,10 @@ async function loadCachedState() {
         const cachedViolations = await loadOfflineData('violations');
 
         if (cachedSessions.length > 0) {
-            // Reconstruct active sessions from cached data
+            // Reconstruct active sessions, ensuring we only take the latest active ones
+            cachedSessions.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
             cachedSessions.forEach(session => {
-                if (session.status === 'active') {
+                if (session.status === 'active' && !activeSessions[session.bayId]) {
                     activeSessions[session.bayId] = session;
                 }
             });
@@ -137,6 +163,7 @@ async function loadCachedState() {
         if (cachedViolations.length > 0) {
             violations = cachedViolations.filter(v => !v.compounded);
         }
+
 
         console.log('Loaded cached data:', { sessions: cachedSessions.length, violations: cachedViolations.length });
     } catch (error) {
@@ -148,6 +175,13 @@ async function loadCachedState() {
 async function setupPushNotifications() {
     if (!('Notification' in window)) {
         console.log('Push notifications not supported');
+        return;
+    }
+
+    // Skip if VAPID key is placeholder
+    const VAPID_KEY = 'YOUR_PUBLIC_VAPID_KEY';
+    if (VAPID_KEY === 'YOUR_PUBLIC_VAPID_KEY' || !VAPID_KEY) {
+        console.log('Push notification VAPID key not configured. Using local notifications only.');
         return;
     }
 
@@ -163,7 +197,7 @@ async function setupPushNotifications() {
             try {
                 const subscription = await registration.pushManager.subscribe({
                     userVisibleOnly: true,
-                    applicationServerKey: urlBase64ToUint8Array('YOUR_PUBLIC_VAPID_KEY')
+                    applicationServerKey: urlBase64ToUint8Array(VAPID_KEY)
                 });
 
                 console.log('Push subscription:', subscription);
@@ -177,11 +211,15 @@ async function setupPushNotifications() {
     }
 }
 
+
 // Setup Background Sync
 async function setupBackgroundSync() {
-    if ('serviceWorker' in navigator && 'SyncManager' in window) {
-        const registration = await navigator.serviceWorker.ready;
+    if (!('serviceWorker' in navigator)) return;
 
+    const registration = await navigator.serviceWorker.ready;
+
+    // Background Sync
+    if ('SyncManager' in window) {
         try {
             await registration.sync.register('sync-parking-data');
             console.log('Background sync registered');
@@ -191,7 +229,7 @@ async function setupBackgroundSync() {
     }
 
     // Setup periodic sync if supported
-    if ('serviceWorker' in navigator && 'periodicSync' in registration) {
+    if ('periodicSync' in registration) {
         try {
             await registration.periodicSync.register('check-parking-status', {
                 minInterval: 5 * 60 * 1000 // 5 minutes
@@ -202,6 +240,7 @@ async function setupBackgroundSync() {
         }
     }
 }
+
 
 // Utility function for VAPID key conversion
 function urlBase64ToUint8Array(base64String) {
@@ -245,20 +284,17 @@ function renderBays() {
 
         const card = `
             <div class="col-6 col-md-3">
-                <div class="card bay-card ${statusClass}" onclick="toggleBay(${bay.id})">
-                    <div class="card-body text-center p-2">
-                        <h6 class="mb-1">Bay ${bay.number}</h6>
-                        <span class="badge bg-light text-dark mb-1 small">${bay.type}</span>
-                        <p class="mb-1 small fw-bold">${statusText}</p>
-                        ${session ? `
-                            <div class="progress mb-1">
-                                <div class="progress-bar bg-white" 
-                                     style="width: ${getProgress(bay.id)}%"></div>
-                            </div>
-                            <small class="timer-display" id="timer-${bay.id}">
-                                ${formatTime(bay.id)}
-                            </small>
-                        ` : '<small class="text-white-50">Tap to park</small>'}
+                <div class="card bay-card ${statusClass} h-100" onclick="toggleBay(${bay.id})">
+                    <div class="status-dot"></div>
+                    <div class="mb-1 text-muted small fw-bold">
+                        ${bay.location.split(' ')[0]}-${bay.number}
+                    </div>
+                    <h3 class="mb-0 fw-bold" style="color: var(--text-primary); font-size: 2.2rem; letter-spacing: -1px;">
+                        ${bay.number}
+                    </h3>
+                    <div class="mt-auto pt-3 d-flex justify-content-between align-items-end">
+                        <small class="text-muted" style="font-size: 0.75rem;">${bay.location.split(' ')[0]}<br>${bay.type}</small>
+                        ${session ? '<i class="bi bi-car-front-fill fs-5" style="color: var(--text-secondary);"></i>' : ''}
                     </div>
                 </div>
             </div>
@@ -266,6 +302,7 @@ function renderBays() {
         grid.append(card);
     });
 }
+
 
 // Toggle bay occupancy
 async function toggleBay(bayId) {
@@ -365,8 +402,15 @@ function formatTime(bayId) {
 
 // Trigger enforcer alert
 async function triggerEnforcerAlert(bayId) {
+    const numericBayId = parseInt(bayId); // Fix: ensure bayId is numeric
     const session = activeSessions[bayId];
-    const bay = bays.find(b => b.id === bayId);
+    const bay = bays.find(b => b.id === numericBayId);
+
+    if (!session || !bay) {
+        console.warn('triggerEnforcerAlert: session or bay not found for bayId', bayId);
+        return;
+    }
+
     const elapsed = Math.floor((Date.now() - session.startTime) / 60000);
     const overstay = elapsed - bay.maxMinutes;
 
@@ -534,7 +578,7 @@ function updateActiveSessionsTable() {
     const sessions = Object.values(activeSessions);
 
     if (sessions.length === 0) {
-        tbody.html('<tr><td colspan="5" class="text-center text-muted">No active sessions</td></tr>');
+        tbody.html('<tr><td colspan="7" class="text-center text-muted">No active sessions</td></tr>');
         return;
     }
 
@@ -542,22 +586,28 @@ function updateActiveSessionsTable() {
     sessions.forEach(session => {
         const bay = bays.find(b => b.id === session.bayId);
         const elapsed = Math.floor((Date.now() - session.startTime) / 60000);
-        const remaining = Math.max(0, bay.maxMinutes - elapsed);
         const isViolation = elapsed > bay.maxMinutes;
+        const timeIn = new Date(session.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+        // Helper to format duration like 01:12:30
+        const pad = (num) => num.toString().padStart(2, '0');
+        const durationStr = `${pad(Math.floor(elapsed / 60))}:${pad(elapsed % 60)}:00`;
 
         html += `
             <tr class="${isViolation ? 'table-danger' : ''}">
-                <td><strong>${session.bayNumber}</strong></td>
-                <td><small>${session.bayType}</small></td>
-                <td><small>${elapsed}m</small></td>
+                <td class="fw-bold">${bay.location.split(' ')[0]}-${bay.number}</td>
+                <td class="text-muted">${bay.location}</td>
+                <td>${timeIn}</td>
+                <td>${durationStr}</td>
+                <td class="text-muted">Sedan</td> <!-- Using static vehicle type to match mockup -->
                 <td>
-                    <span class="badge ${isViolation ? 'bg-danger' : 'bg-success'}">
-                        ${isViolation ? 'VIOLATION' : 'ACTIVE'}
+                    <span class="badge badge-pill text-white" style="background-color: ${isViolation ? 'var(--accent-danger)' : 'var(--accent-primary)'}; border-radius: 20px; padding: 6px 14px; font-weight: 500;">
+                        ${isViolation ? 'Violation' : 'Occupied'}
                     </span>
                 </td>
-                <td>
-                    <button class="btn btn-sm btn-outline-danger" onclick="endParkingSession(${session.bayId})">
-                        End
+                <td class="text-end">
+                    <button class="btn btn-sm btn-link text-danger p-0 m-0 border-0" onclick="endParkingSession(${session.bayId})">
+                        <i class="bi bi-x-circle-fill"></i>
                     </button>
                 </td>
             </tr>
@@ -566,6 +616,7 @@ function updateActiveSessionsTable() {
 
     tbody.html(html);
 }
+
 
 // Show notification toast
 function showNotification(message, type = 'info') {
@@ -674,13 +725,16 @@ function startEnforcerCheck() {
 
 // Handle online/offline status
 window.addEventListener('online', () => {
+    document.getElementById('offlineIndicator').classList.remove('show');
     showNotification('Back online', 'success');
     syncOfflineData();
 });
 
 window.addEventListener('offline', () => {
+    document.getElementById('offlineIndicator').classList.add('show');
     showNotification('Offline mode - Data will sync when online', 'warning');
 });
+
 
 // Sync offline data when back online
 async function syncOfflineData() {
@@ -725,6 +779,30 @@ window.resetAllBays = resetAllBays;
 window.compoundViolation = compoundViolation;
 window.compoundAllViolations = compoundAllViolations;
 window.refreshData = refreshData;
+window.toggleTheme = toggleTheme;
+
+// Theme logic
+function toggleTheme() {
+    const currentTheme = document.documentElement.getAttribute('data-theme');
+    const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+
+    document.documentElement.setAttribute('data-theme', newTheme);
+    localStorage.setItem('theme', newTheme);
+
+    updateThemeIcon(newTheme);
+}
+
+function updateThemeIcon(theme) {
+    const currentTheme = theme || document.documentElement.getAttribute('data-theme') || 'light';
+    const icon = document.getElementById('themeIcon');
+    if (icon) {
+        if (currentTheme === 'dark') {
+            icon.className = 'bi bi-sun-fill';
+        } else {
+            icon.className = 'bi bi-moon-fill';
+        }
+    }
+}
 
 // Initialize app when ready
 $(document).ready(() => {

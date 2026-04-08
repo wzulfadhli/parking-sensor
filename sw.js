@@ -70,6 +70,12 @@ self.addEventListener('fetch', event => {
                     return cachedResponse;
                 }
 
+                // If it's an API request, return mock data for the demo
+                if (event.request.url.includes('/api/')) {
+                    console.log('[SW] Mocking API request:', event.request.url);
+                    return handleMockApi(event.request);
+                }
+
                 // Not in cache, fetch from network
                 return fetch(event.request)
                     .then(response => {
@@ -101,6 +107,7 @@ self.addEventListener('fetch', event => {
                                 JSON.stringify({
                                     error: 'You are offline',
                                     offline: true,
+                                    mock: true,
                                     timestamp: new Date().toISOString()
                                 }),
                                 {
@@ -112,6 +119,7 @@ self.addEventListener('fetch', event => {
                         throw error;
                     });
             })
+
     );
 });
 
@@ -210,6 +218,34 @@ self.addEventListener('periodicsync', event => {
         event.waitUntil(checkParkingStatus());
     }
 });
+
+// Mock API Handler for demo purposes
+function handleMockApi(request) {
+    const url = new URL(request.url);
+    const path = url.pathname;
+
+    let responseData = { success: true, mock: true, timestamp: new Date().toISOString() };
+
+    if (path.includes('/api/parking/status')) {
+        responseData = {
+            ...responseData,
+            status: 'online',
+            totalBays: 8,
+            violations: []
+        };
+    } else if (path.includes('/api/parking/sync')) {
+        responseData = {
+            ...responseData,
+            message: 'Data successfully synced with mock server'
+        };
+    }
+
+    return new Response(JSON.stringify(responseData), {
+        headers: { 'Content-Type': 'application/json' },
+        status: 200
+    });
+}
+
 
 // Helper function to sync parking data
 async function syncParkingData() {
