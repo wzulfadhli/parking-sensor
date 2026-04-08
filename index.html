@@ -1,30 +1,31 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="theme-color" content="#667eea">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="Smart Parking">
-    <meta name="description" content="Smart Parking System with Xperanti Sensors - Real-time parking management">
-    
+    <meta name="apple-mobile-web-app-title" content="Timed Parking Sensor Simulation">
+    <meta name="description" content="Timed Parking Sensor Simulation">
+
     <title>Timed Parking Sensor Simulation</title>
-    
+
     <!-- PWA Manifest -->
     <link rel="manifest" href="manifest.json">
-    
+
     <!-- Apple Touch Icon -->
     <link rel="apple-touch-icon" href="icons/icon-192x192.png">
-    
+
     <!-- Favicon -->
     <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32x32.png">
     <link rel="icon" type="image/png" sizes="16x16" href="icons/favicon-16x16.png">
-    
+
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
-    
+
     <style>
         body {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -32,60 +33,68 @@
             padding: 10px;
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
         }
-        
+
         .dashboard-container {
             background: rgba(255, 255, 255, 0.95);
             border-radius: 20px;
             padding: 20px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
             max-width: 1400px;
             margin: 0 auto;
         }
-        
+
         .bay-card {
             transition: all 0.3s ease;
             cursor: pointer;
             border: 2px solid transparent;
             margin-bottom: 15px;
         }
-        
+
         .bay-card:active {
             transform: scale(0.98);
         }
-        
+
         .bay-available {
             background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
             color: white;
         }
-        
+
         .bay-occupied {
             background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
             color: white;
         }
-        
+
         .bay-violation {
             background: linear-gradient(135deg, #eb3349 0%, #f45c43 100%);
             color: white;
             animation: pulse 1.5s infinite;
         }
-        
+
         @keyframes pulse {
-            0% { box-shadow: 0 0 0 0 rgba(235, 51, 73, 0.7); }
-            70% { box-shadow: 0 0 0 15px rgba(235, 51, 73, 0); }
-            100% { box-shadow: 0 0 0 0 rgba(235, 51, 73, 0); }
+            0% {
+                box-shadow: 0 0 0 0 rgba(235, 51, 73, 0.7);
+            }
+
+            70% {
+                box-shadow: 0 0 0 15px rgba(235, 51, 73, 0);
+            }
+
+            100% {
+                box-shadow: 0 0 0 0 rgba(235, 51, 73, 0);
+            }
         }
-        
+
         .timer-display {
             font-family: 'Courier New', monospace;
             font-weight: bold;
             font-size: 14px;
         }
-        
+
         .progress {
             height: 6px;
             border-radius: 10px;
         }
-        
+
         .notification-toast {
             position: fixed;
             top: 10px;
@@ -94,15 +103,15 @@
             min-width: 280px;
             max-width: 350px;
         }
-        
+
         .stats-card {
             background: white;
             border-radius: 15px;
             padding: 15px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
             margin-bottom: 10px;
         }
-        
+
         .enforcer-alert {
             background: #ff4757;
             color: white;
@@ -111,18 +120,19 @@
             margin-bottom: 10px;
             animation: slideIn 0.5s ease;
         }
-        
+
         @keyframes slideIn {
             from {
                 transform: translateX(100%);
                 opacity: 0;
             }
+
             to {
                 transform: translateX(0);
                 opacity: 1;
             }
         }
-        
+
         .install-prompt {
             position: fixed;
             bottom: 20px;
@@ -131,14 +141,14 @@
             background: white;
             border-radius: 50px;
             padding: 12px 24px;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
             z-index: 10000;
             display: none;
             align-items: center;
             gap: 15px;
             border: 2px solid #667eea;
         }
-        
+
         .offline-indicator {
             position: fixed;
             top: 10px;
@@ -154,7 +164,7 @@
             align-items: center;
             gap: 8px;
         }
-        
+
         .refresh-button {
             position: fixed;
             bottom: 20px;
@@ -173,47 +183,47 @@
             font-size: 24px;
             transition: all 0.3s;
         }
-        
+
         .refresh-button:active {
             transform: scale(0.9);
         }
-        
+
         @media (max-width: 768px) {
             body {
                 padding: 5px;
             }
-            
+
             .dashboard-container {
                 padding: 10px;
                 border-radius: 15px;
             }
-            
+
             h1 {
                 font-size: 20px;
             }
-            
+
             .stats-card h3 {
                 font-size: 18px;
             }
-            
+
             .bay-card {
                 margin-bottom: 10px;
             }
-            
+
             .bay-card .card-body {
                 padding: 10px;
             }
-            
+
             .bay-card h5 {
                 font-size: 16px;
                 margin-bottom: 5px;
             }
-            
+
             .timer-display {
                 font-size: 11px;
             }
         }
-        
+
         /* Pull-to-refresh indicator */
         .ptr-indicator {
             text-align: center;
@@ -221,38 +231,41 @@
             color: white;
             display: none;
         }
-        
+
         /* Loading spinner */
         .loading-spinner {
             display: inline-block;
             width: 20px;
             height: 20px;
-            border: 3px solid rgba(255,255,255,.3);
+            border: 3px solid rgba(255, 255, 255, .3);
             border-radius: 50%;
             border-top-color: white;
             animation: spin 1s ease-in-out infinite;
         }
-        
+
         @keyframes spin {
-            to { transform: rotate(360deg); }
+            to {
+                transform: rotate(360deg);
+            }
         }
     </style>
 </head>
+
 <body>
     <!-- Offline Indicator -->
     <div class="offline-indicator" id="offlineIndicator">
         <i class="bi bi-wifi-off"></i>
         <span>You're offline - Data syncing when online</span>
     </div>
-    
+
     <!-- Install PWA Prompt -->
     <div class="install-prompt" id="installPrompt">
         <i class="bi bi-download" style="font-size: 24px;"></i>
-        <span>Install Smart Parking App</span>
+        <span>Install Timed Parking Sensor Simulation App</span>
         <button class="btn btn-primary btn-sm" onclick="installPWA()">Install</button>
         <button class="btn btn-link btn-sm" onclick="dismissInstall()">Later</button>
     </div>
-    
+
     <!-- Refresh Button -->
     <button class="refresh-button" onclick="syncData()" id="refreshBtn">
         <i class="bi bi-arrow-clockwise"></i>
@@ -261,7 +274,7 @@
     <div class="dashboard-container">
         <div class="d-flex justify-content-between align-items-center mb-3">
             <h1 class="display-6">
-                <i class="bi bi-p-square-fill"></i> Smart Parking
+                <i class="bi bi-p-square-fill"></i> Timed Parking Sensor Simulation
                 <span class="badge bg-info ms-2">PWA</span>
             </h1>
             <div>
@@ -366,17 +379,18 @@
 
     <!-- Notification Container -->
     <div class="notification-toast" id="notificationContainer"></div>
-    
+
     <!-- Audio Element for Alerts -->
-    <audio id="alertSound" src="https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3" preload="auto"></audio>
+    <audio id="alertSound" src="https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3"
+        preload="auto"></audio>
 
     <!-- Scripts -->
     <script src="https://code.jquery.com/jquery-4.0.0-beta.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    
+
     <!-- Main Application Script -->
     <script src="app.js"></script>
-    
+
     <!-- PWA Registration -->
     <script>
         // Register Service Worker
@@ -391,14 +405,14 @@
                     });
             });
         }
-        
+
         // PWA Install Prompt
         let deferredPrompt;
-        
+
         window.addEventListener('beforeinstallprompt', (e) => {
             e.preventDefault();
             deferredPrompt = e;
-            
+
             // Show install prompt after 3 seconds
             setTimeout(() => {
                 if (localStorage.getItem('pwaInstalled') !== 'true') {
@@ -406,7 +420,7 @@
                 }
             }, 3000);
         });
-        
+
         function installPWA() {
             if (deferredPrompt) {
                 deferredPrompt.prompt();
@@ -420,36 +434,36 @@
                 });
             }
         }
-        
+
         function dismissInstall() {
             document.getElementById('installPrompt').style.display = 'none';
             localStorage.setItem('pwaInstallDismissed', Date.now());
         }
-        
+
         // Check online/offline status
         window.addEventListener('online', () => {
             document.getElementById('offlineIndicator').style.display = 'none';
             syncData();
             showNotification('Back online - Syncing data', 'success');
         });
-        
+
         window.addEventListener('offline', () => {
             document.getElementById('offlineIndicator').style.display = 'flex';
             showNotification('You are offline - Data will be saved locally', 'warning');
         });
-        
+
         // Sync data when online
         function syncData() {
             const refreshBtn = document.getElementById('refreshBtn');
             refreshBtn.innerHTML = '<span class="loading-spinner"></span>';
-            
+
             setTimeout(() => {
                 refreshData();
                 refreshBtn.innerHTML = '<i class="bi bi-arrow-clockwise"></i>';
                 showNotification('Data synchronized', 'success');
             }, 1000);
         }
-        
+
         // Check if installed as PWA
         if (window.matchMedia('(display-mode: standalone)').matches) {
             localStorage.setItem('pwaInstalled', 'true');
@@ -457,4 +471,5 @@
         }
     </script>
 </body>
+
 </html>
