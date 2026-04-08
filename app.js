@@ -375,22 +375,27 @@ async function endParkingSession(bayId) {
 
 // Get progress percentage
 function getProgress(bayId) {
+    const numericId = parseInt(bayId);
     const session = activeSessions[bayId];
     if (!session) return 0;
 
-    const bay = bays.find(b => b.id === bayId);
+    const bay = bays.find(b => b.id === numericId);
+    if (!bay) return 0;
+
     const elapsed = Math.floor((Date.now() - session.startTime) / 60000);
     return Math.min(100, (elapsed / bay.maxMinutes) * 100);
 }
 
 // Format time display
 function formatTime(bayId) {
+    const numericId = parseInt(bayId);
     const session = activeSessions[bayId];
     if (!session) return '0:00';
 
-    const bay = bays.find(b => b.id === bayId);
+    const bay = bays.find(b => b.id === numericId);
+    if (!bay) return '0:00';
+
     const elapsed = Math.floor((Date.now() - session.startTime) / 60000);
-    const remaining = Math.max(0, bay.maxMinutes - elapsed);
 
     if (elapsed > bay.maxMinutes) {
         const overstay = elapsed - bay.maxMinutes;
@@ -584,7 +589,8 @@ function updateActiveSessionsTable() {
 
     let html = '';
     sessions.forEach(session => {
-        const bay = bays.find(b => b.id === session.bayId);
+        const bay = bays.find(b => b.id === parseInt(session.bayId));
+        if (!bay) return; // Guard against stale session data
         const elapsed = Math.floor((Date.now() - session.startTime) / 60000);
         const isViolation = elapsed > bay.maxMinutes;
         const timeIn = new Date(session.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -711,8 +717,11 @@ function startTimers() {
 function startEnforcerCheck() {
     setInterval(() => {
         Object.keys(activeSessions).forEach(bayId => {
-            const bay = bays.find(b => b.id === parseInt(bayId));
+            const numericId = parseInt(bayId);
+            const bay = bays.find(b => b.id === numericId);
             const session = activeSessions[bayId];
+            if (!bay || !session) return;
+
             const elapsed = Math.floor((Date.now() - session.startTime) / 60000);
 
             if (elapsed > bay.maxMinutes && !session.enforcerNotified) {
