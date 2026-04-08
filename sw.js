@@ -134,7 +134,7 @@ self.addEventListener('push', event => {
 
     let data = {
         title: 'Parking Alert',
-        body: 'New notification from Smart Parking System',
+        body: 'New notification from Smart Parking Sensor System System',
         icon: '/icons/icon-192x192.png',
         badge: '/icons/badge-72x72.png',
         vibrate: [200, 100, 200],

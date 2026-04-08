@@ -1,7 +1,7 @@
 {
-    "name": "Smart Parking System",
+    "name": "Smart Parking Sensor System",
     "short_name": "SmartPark",
-    "description": "Real-time parking management with Xperanti sensors",
+    "description": "Real-time parking sensor system",
     "theme_color": "#667eea",
     "background_color": "#667eea",
     "display": "standalone",
@@ -64,14 +64,14 @@
             "sizes": "1280x720",
             "type": "image/png",
             "form_factor": "wide",
-            "label": "Dashboard view of Smart Parking System"
+            "label": "Dashboard view of Smart Parking Sensor System"
         },
         {
             "src": "screenshots/mobile.png",
             "sizes": "720x1280",
             "type": "image/png",
             "form_factor": "narrow",
-            "label": "Mobile view of Smart Parking System"
+            "label": "Mobile view of Smart Parking Sensor System"
         }
     ],
     "categories": ["productivity", "utilities"],
