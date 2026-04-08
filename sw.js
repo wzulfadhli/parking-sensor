@@ -1,17 +1,16 @@
-const CACHE_NAME = 'smart-parking-v1';
-const DYNAMIC_CACHE = 'smart-parking-dynamic-v1';
+const CACHE_NAME = 'smart-parking-v2';
+const DYNAMIC_CACHE = 'smart-parking-dynamic-v2';
 
-// Assets to cache on install
+// Assets to cache on install — use relative paths for GitHub Pages subdirectory hosting
 const STATIC_ASSETS = [
-    '/',
-    '/index.html',
-    '/app.js',
-    '/manifest.json',
+    './index.html',
+    './app.js',
+    './manifest.json',
+    './offline.html',
     'https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css',
     'https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css',
     'https://code.jquery.com/jquery-4.0.0-beta.min.js',
-    'https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js',
-    'https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3'
+    'https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js'
 ];
 
 // Install Service Worker
@@ -22,7 +21,12 @@ self.addEventListener('install', event => {
         caches.open(CACHE_NAME)
             .then(cache => {
                 console.log('[SW] Caching static assets');
-                return cache.addAll(STATIC_ASSETS);
+                // Cache each asset individually so one failure doesn't break everything
+                return Promise.allSettled(
+                    STATIC_ASSETS.map(url =>
+                        cache.add(url).catch(err => console.warn('[SW] Failed to cache:', url, err))
+                    )
+                );
             })
             .then(() => {
                 console.log('[SW] Skip waiting');
