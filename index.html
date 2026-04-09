@@ -113,12 +113,82 @@
                 font-size: 1.6rem !important;
             }
 
-            .table thead th,
-            .table td {
-                padding: 10px 12px !important;
-                font-size: 0.8rem !important;
+            /* Responsive Table (Cards on Mobile) */
+            .table-dark-custom {
+                background-color: transparent !important;
+                border: none !important;
+                box-shadow: none !important;
             }
 
+            .table-dark-custom .card-body {
+                background-color: transparent !important;
+                padding: 0 !important;
+            }
+
+            .table-dark-custom .table-responsive {
+                overflow: visible !important;
+            }
+
+            .table-dark-custom .table,
+            .table-dark-custom thead,
+            .table-dark-custom tbody,
+            .table-dark-custom tr,
+            .table-dark-custom td {
+                display: block;
+                width: 100%;
+            }
+
+            .table-dark-custom thead {
+                display: none;
+            }
+
+            .table-dark-custom tr {
+                background-color: var(--surface-color);
+                border: 1px solid var(--border-color) !important;
+                border-radius: 20px !important;
+                margin-bottom: 16px;
+                padding: 16px;
+                box-shadow: var(--card-shadow);
+            }
+
+            [data-theme="dark"] .table-dark-custom tr {
+                background-color: #1e293b !important;
+                border: 1px solid #334155 !important;
+            }
+
+            .table-dark-custom td {
+                text-align: right !important;
+                padding: 8px 0 !important;
+                border: none !important;
+                position: relative;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                font-size: 0.9rem !important;
+            }
+
+            .table-dark-custom td::before {
+                content: attr(data-label);
+                font-weight: 700;
+                color: var(--text-secondary);
+                font-size: 0.75rem;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+            }
+
+            .table-dark-custom td.text-end {
+                justify-content: flex-end;
+                gap: 10px;
+                margin-top: 10px;
+                padding-top: 15px !important;
+                border-top: 1px solid var(--border-color) !important;
+            }
+
+            [data-theme="dark"] .table-dark-custom td.text-end {
+                border-top: 1px solid #334155 !important;
+            }
+
+            /* Fix refresh button for mobile */
             .refresh-button {
                 bottom: 20px;
                 right: 16px;
@@ -460,11 +530,11 @@
     </script>
 
     <!-- Refresh Button -->
-    <button class="refresh-button" onclick="syncData()" id="refreshBtn">
+    <!-- <button class="refresh-button" onclick="syncData()" id="refreshBtn">
         <i class="bi bi-arrow-clockwise"></i>
-    </button>
+    </button> -->
 
-    <div class="dashboard-container">
+    <div class="dashboard-container mt-4 mb-4">
         <!-- Header -->
         <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
             <h1 class="display-6 mb-0">
@@ -480,7 +550,11 @@
                     <i class="bi bi-car-front"></i> <span class="d-none d-sm-inline">Simulate</span>
                 </button>
                 <button class="btn btn-warning" onclick="resetAllBays()">
-                    <i class="bi bi-arrow-clockwise"></i> <span class="d-none d-sm-inline">Reset</span>
+                    <span class="d-none d-sm-inline">Reset</span>
+                </button>
+                <!-- Refresh Button -->
+                <button class="btn btn-outline-secondary" onclick="syncData()" id="refreshBtn">
+                    <i class="bi bi-arrow-clockwise"></i> <span class="d-none d-sm-inline">Sync</span>
                 </button>
             </div>
         </div>
@@ -545,7 +619,7 @@
 
         <!-- Active Sessions Table -->
         <h5 class="mb-3 mt-4">Active Sessions</h5>
-        <div class="row mb-5">
+        <div class="row mb-4">
             <div class="col-12">
                 <div class="card table-dark-custom">
                     <div class="card-body p-0">
@@ -576,7 +650,7 @@
 
         <div class="row">
             <!-- Parking Bays Grid -->
-            <div class="col-md-8 mb-4">
+            <div class="col-md-8 mb-2">
                 <h5 class="mb-2">Parking Bays</h5>
                 <div class="row" id="baysGrid">
                     <!-- Bays will be dynamically generated -->
@@ -597,7 +671,7 @@
                     </div>
                     <div class="card-footer p-2">
                         <button class="btn btn-success btn-sm w-100" onclick="compoundAllViolations()">
-                            <i class="bi bi-check-circle"></i> Compound All
+                            <i class="bi bi-shield-fill"></i> Compound All
                         </button>
                     </div>
                 </div>
@@ -683,10 +757,14 @@
             e.preventDefault();
             deferredPrompt = e;
 
-            // Show install prompt after 3 seconds
+            // Show install prompt after 3 seconds, but only once per session
             setTimeout(() => {
-                if (localStorage.getItem('pwaInstalled') !== 'true') {
+                const isInstalled = localStorage.getItem('pwaInstalled') === 'true';
+                const isPromptedThisSession = sessionStorage.getItem('pwaPromptShown') === 'true';
+
+                if (!isInstalled && !isPromptedThisSession) {
                     document.getElementById('installPrompt').style.display = 'flex';
+                    sessionStorage.setItem('pwaPromptShown', 'true');
                 }
             }, 3000);
         });
@@ -707,7 +785,8 @@
 
         function dismissInstall() {
             document.getElementById('installPrompt').style.display = 'none';
-            localStorage.setItem('pwaInstallDismissed', Date.now());
+            // Record that it was dismissed in this session so it won't reappear until the link is reopened
+            sessionStorage.setItem('pwaPromptShown', 'true');
         }
 
         // Check online/offline status

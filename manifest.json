@@ -74,7 +74,10 @@
             "label": "Mobile view of Smart Parking Sensor System"
         }
     ],
-    "categories": ["productivity", "utilities"],
+    "categories": [
+        "productivity",
+        "utilities"
+    ],
     "shortcuts": [
         {
             "name": "View Dashboard",

@@ -86,7 +86,7 @@ self.addEventListener('fetch', event => {
     // Strategy 2: Stale-While-Revalidate for local assets (app.js, manifest, CSS)
     // Serve from cache immediately for speed, but fetch latest in background for next time
     const isLocalAsset = STATIC_ASSETS.some(asset => event.request.url.includes(asset.replace('./', '')));
-    
+
     if (isLocalAsset || url.origin === location.origin) {
         event.respondWith(
             caches.match(event.request).then(cachedResponse => {

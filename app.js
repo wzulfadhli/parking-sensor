@@ -283,18 +283,18 @@ function renderBays() {
         }
 
         const card = `
-            <div class="col-6 col-md-3 mb-4">
-                <div class="card bay-card ${statusClass} h-100" onclick="toggleBay(${bay.id})">
-                    <div class="status-dot"></div>
-                    <div class="mb-1 text-muted small fw-bold">
-                        ${bay.location.split(' ')[0]}-${bay.number}
+            <div class="col-4 col-md-2 mb-2">  <!-- Smaller columns -->
+                <div class="card bay-card ${statusClass} h-80" onclick="toggleBay(${bay.id})">
+                    <div class="status-dot" style="width: 8px; height: 8px;"></div>
+                    <div class="mb-1 text-muted small fw-bold" style="font-size: 0.65rem;">
+                        ${bay.location}-${bay.number}
                     </div>
-                    <h3 class="mb-0 fw-bold" style="color: var(--text-primary); font-size: 2.2rem; letter-spacing: -1px;">
+                    <h3 class="mb-0 fw-bold" style="color: var(--text-primary); font-size: 1.3rem; letter-spacing: -1px;">
                         ${bay.number}
                     </h3>
-                    <div class="mt-auto pt-3 d-flex justify-content-between align-items-end">
-                        <small class="text-muted" style="font-size: 0.75rem;">${bay.location.split(' ')[0]}<br>${bay.type}</small>
-                        ${session ? '<i class="bi bi-car-front-fill fs-5" style="color: var(--text-secondary);"></i>' : ''}
+                    <div class="mt-auto pt-2 d-flex justify-content-between align-items-end">
+                        <small class="text-muted" style="font-size: 0.6rem;">${bay.location}<br>${bay.type}</small>
+                        ${session ? '</i>' : ''}
                     </div>
                 </div>
             </div>
@@ -395,14 +395,21 @@ function formatTime(bayId) {
     const bay = bays.find(b => b.id === numericId);
     if (!bay) return '0:00';
 
-    const elapsed = Math.floor((Date.now() - session.startTime) / 60000);
+    const totalSeconds = Math.floor((Date.now() - session.startTime) / 1000);
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+    const limitSeconds = bay.maxMinutes * 60;
 
-    if (elapsed > bay.maxMinutes) {
-        const overstay = elapsed - bay.maxMinutes;
-        return `+${overstay}m`;
+    const pad = (num) => num.toString().padStart(2, '0');
+
+    if (totalSeconds > limitSeconds) {
+        const overstaySeconds = totalSeconds - limitSeconds;
+        const overstayM = Math.floor(overstaySeconds / 60);
+        const overstayS = overstaySeconds % 60;
+        return `+${overstayM}:${pad(overstayS)}`;
     }
 
-    return `${elapsed}/${bay.maxMinutes}m`;
+    return `${minutes}:${pad(seconds)} / ${bay.maxMinutes}m`;
 }
 
 // Trigger enforcer alert
@@ -413,6 +420,11 @@ async function triggerEnforcerAlert(bayId) {
 
     if (!session || !bay) {
         console.warn('triggerEnforcerAlert: session or bay not found for bayId', bayId);
+        return;
+    }
+
+    // Guard: Prevent duplicate violations for the same session
+    if (violations.some(v => v.bayId === bayId && !v.compounded)) {
         return;
     }
 
@@ -436,6 +448,7 @@ async function triggerEnforcerAlert(bayId) {
         id: Date.now(),
         bayId: bayId,
         bayNumber: bay.number,
+        bayLocation: bay.location,
         overstayMinutes: overstay,
         time: new Date(),
         status: 'pending',
@@ -504,6 +517,7 @@ function updateEnforcerPanel() {
                     <h6 class="mb-1">Bay ${v.bayNumber}</h6>
                     <span class="badge bg-light text-dark">+${v.overstayMinutes}m</span>
                 </div>
+                <p class="mb-2 small">Location: ${v.bayLocation}</p>
                 <p class="mb-2 small">Fee: RM${fee}</p>
                 <button class="btn btn-sm btn-light w-100" onclick="compoundViolation(${v.id})">
                     Compound
@@ -591,28 +605,47 @@ function updateActiveSessionsTable() {
     sessions.forEach(session => {
         const bay = bays.find(b => b.id === parseInt(session.bayId));
         if (!bay) return; // Guard against stale session data
-        const elapsed = Math.floor((Date.now() - session.startTime) / 60000);
-        const isViolation = elapsed > bay.maxMinutes;
+
+        const elapsedMs = Date.now() - session.startTime;
+        const totalSeconds = Math.floor(elapsedMs / 1000);
+        const isViolation = elapsedMs > (bay.maxMinutes * 60000);
         const timeIn = new Date(session.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
         // Helper to format duration like 01:12:30
         const pad = (num) => num.toString().padStart(2, '0');
-        const durationStr = `${pad(Math.floor(elapsed / 60))}:${pad(elapsed % 60)}:00`;
+        const h = Math.floor(totalSeconds / 3600);
+        const m = Math.floor((totalSeconds % 3600) / 60);
+        const s = totalSeconds % 60;
+        const durationStr = `${pad(h)}:${pad(m)}:${pad(s)}`;
+
+        // Find associated violation for compounding if in violation state
+        let compoundBtn = '';
+        if (isViolation) {
+            const violation = violations.find(v => v.bayId == session.bayId && !v.compounded);
+            if (violation) {
+                compoundBtn = `
+                    <button class="badge badge-pill text-white" style="background-color: var(--accent-success); padding: 6px 14px; font-weight: 500;" onclick="compoundViolation(${violation.id})" title="Compound Violation">
+                        <i class="bi bi-shield-fill"></i> Compound
+                    </button>
+                `;
+            }
+        }
 
         html += `
             <tr class="${isViolation ? 'table-danger' : ''}">
-                <td class="fw-bold">${bay.location.split(' ')[0]}-${bay.number}</td>
-                <td class="text-muted">${bay.location}</td>
-                <td>${timeIn}</td>
-                <td>${durationStr}</td>
-                <td class="text-muted">${bay.type}</td>
-                <td>
+                <td data-label="Bay ID" class="fw-bold">${bay.location}-${bay.number}</td>
+                <td data-label="Location" class="text-muted">${bay.location}</td>
+                <td data-label="Time In">${timeIn}</td>
+                <td data-label="Duration">${durationStr}</td>
+                <td data-label="Type" class="text-muted">${bay.type}</td>
+                <td data-label="Status">
                     <span class="badge badge-pill text-white" style="background-color: ${isViolation ? 'var(--accent-danger)' : 'var(--accent-primary)'}; border-radius: 20px; padding: 6px 14px; font-weight: 500;">
                         ${isViolation ? 'Violation' : 'Occupied'}
                     </span>
                 </td>
                 <td class="text-end">
-                    <button class="btn btn-sm btn-link text-danger p-0 m-0 border-0" onclick="endParkingSession(${session.bayId})">
+                    ${compoundBtn}
+                    <button class="btn btn-sm btn-link text-danger p-0 m-0 border-0" onclick="endParkingSession(${session.bayId})" title="End Session">
                         <i class="bi bi-x-circle-fill"></i>
                     </button>
                 </td>
@@ -722,14 +755,15 @@ function startEnforcerCheck() {
             const session = activeSessions[bayId];
             if (!bay || !session) return;
 
-            const elapsed = Math.floor((Date.now() - session.startTime) / 60000);
+            const elapsedMs = Date.now() - session.startTime;
+            const limitMs = bay.maxMinutes * 60000;
 
-            if (elapsed > bay.maxMinutes && !session.enforcerNotified) {
+            if (elapsedMs > limitMs && !session.enforcerNotified) {
                 triggerEnforcerAlert(bayId);
                 session.enforcerNotified = true;
             }
         });
-    }, 5000);
+    }, 2000); // Check every 2 seconds for faster triggering
 }
 
 // Handle online/offline status
