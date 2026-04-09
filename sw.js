@@ -1,5 +1,5 @@
-const CACHE_NAME = 'smart-parking-v3';
-const DYNAMIC_CACHE = 'smart-parking-dynamic-v3';
+const CACHE_NAME = 'smart-parking-v4';
+const DYNAMIC_CACHE = 'smart-parking-dynamic-v4';
 
 // Assets to cache on install — use relative paths for GitHub Pages subdirectory hosting
 const STATIC_ASSETS = [
@@ -58,7 +58,7 @@ self.addEventListener('activate', event => {
     );
 });
 
-// Fetch Strategy: Cache First, then Network
+// Fetch Strategy Implementation
 self.addEventListener('fetch', event => {
     // Skip non-GET requests
     if (event.request.method !== 'GET') return;
@@ -66,64 +66,85 @@ self.addEventListener('fetch', event => {
     // Skip chrome-extension requests
     if (event.request.url.startsWith('chrome-extension://')) return;
 
+    const url = new URL(event.request.url);
+
+    // Strategy 1: Network First for index.html (navigation)
+    // This ensures that the user always gets the latest version of the app entry point
+    if (event.request.mode === 'navigate') {
+        event.respondWith(
+            fetch(event.request)
+                .then(response => {
+                    const copy = response.clone();
+                    caches.open(CACHE_NAME).then(cache => cache.put(event.request, copy));
+                    return response;
+                })
+                .catch(() => caches.match('./index.html') || caches.match('./offline.html'))
+        );
+        return;
+    }
+
+    // Strategy 2: Stale-While-Revalidate for local assets (app.js, manifest, CSS)
+    // Serve from cache immediately for speed, but fetch latest in background for next time
+    const isLocalAsset = STATIC_ASSETS.some(asset => event.request.url.includes(asset.replace('./', '')));
+    
+    if (isLocalAsset || url.origin === location.origin) {
+        event.respondWith(
+            caches.match(event.request).then(cachedResponse => {
+                const fetchPromise = fetch(event.request).then(networkResponse => {
+                    if (networkResponse && networkResponse.status === 200) {
+                        const copy = networkResponse.clone();
+                        caches.open(CACHE_NAME).then(cache => cache.put(event.request, copy));
+                    }
+                    return networkResponse;
+                }).catch(() => {
+                    // Fail silently if offline, the cached response (if any) will be used
+                });
+                return cachedResponse || fetchPromise;
+            })
+        );
+        return;
+    }
+
+    // Strategy 3: Cache First for everything else (CDNs, Icons, etc.)
     event.respondWith(
         caches.match(event.request)
             .then(cachedResponse => {
                 if (cachedResponse) {
-                    // Return cached response
                     return cachedResponse;
                 }
 
                 // If it's an API request, return mock data for the demo
                 if (event.request.url.includes('/api/')) {
-                    console.log('[SW] Mocking API request:', event.request.url);
                     return handleMockApi(event.request);
                 }
 
-                // Not in cache, fetch from network
                 return fetch(event.request)
                     .then(response => {
-                        // Check if we received a valid response
                         if (!response || response.status !== 200 || response.type !== 'basic') {
                             return response;
                         }
 
-                        // Clone the response
                         const responseToCache = response.clone();
-
-                        // Cache the response for offline use
-                        caches.open(DYNAMIC_CACHE)
-                            .then(cache => {
-                                cache.put(event.request, responseToCache);
-                            });
+                        caches.open(DYNAMIC_CACHE).then(cache => {
+                            cache.put(event.request, responseToCache);
+                        });
 
                         return response;
                     })
                     .catch(error => {
-                        // Network failed, return offline fallback if it's a navigation request
-                        if (event.request.mode === 'navigate') {
-                            return caches.match('/offline.html');
-                        }
-
                         // For API calls, return a JSON offline response
                         if (event.request.url.includes('/api/')) {
                             return new Response(
                                 JSON.stringify({
                                     error: 'You are offline',
-                                    offline: true,
-                                    mock: true,
-                                    timestamp: new Date().toISOString()
+                                    offline: true
                                 }),
-                                {
-                                    headers: { 'Content-Type': 'application/json' }
-                                }
+                                { headers: { 'Content-Type': 'application/json' } }
                             );
                         }
-
                         throw error;
                     });
             })
-
     );
 });
 
