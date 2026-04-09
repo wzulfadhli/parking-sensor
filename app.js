@@ -96,14 +96,14 @@ async function loadOfflineData(storeName) {
 
 // Parking Bay Configuration
 const bays = [
-    { id: 1, number: 'A01', type: '2min', maxMinutes: 2, sensorId: 'SENSOR_001', location: 'Level 1' },
-    { id: 2, number: 'A02', type: '2min', maxMinutes: 2, sensorId: 'SENSOR_002', location: 'Level 1' },
-    { id: 3, number: 'A03', type: '5min', maxMinutes: 5, sensorId: 'SENSOR_003', location: 'Level 1' },
-    { id: 4, number: 'A04', type: '5min', maxMinutes: 5, sensorId: 'SENSOR_004', location: 'Level 1' },
-    { id: 5, number: 'B01', type: '2min', maxMinutes: 2, sensorId: 'SENSOR_005', location: 'Level 2' },
-    { id: 6, number: 'B02', type: '2min', maxMinutes: 2, sensorId: 'SENSOR_006', location: 'Level 2' },
-    { id: 7, number: 'B03', type: '5min', maxMinutes: 5, sensorId: 'SENSOR_007', location: 'Level 2' },
-    { id: 8, number: 'B04', type: '5min', maxMinutes: 5, sensorId: 'SENSOR_008', location: 'Level 2' }
+    { id: 1, number: 'A01', type: '2 min', maxMinutes: 2, sensorId: 'SENSOR_001', location: 'Level 1' },
+    { id: 2, number: 'A02', type: '2 min', maxMinutes: 2, sensorId: 'SENSOR_002', location: 'Level 1' },
+    { id: 3, number: 'A03', type: '5 min', maxMinutes: 5, sensorId: 'SENSOR_003', location: 'Level 1' },
+    { id: 4, number: 'A04', type: '5 min', maxMinutes: 5, sensorId: 'SENSOR_004', location: 'Level 1' },
+    { id: 5, number: 'B01', type: '2 min', maxMinutes: 2, sensorId: 'SENSOR_005', location: 'Level 2' },
+    { id: 6, number: 'B02', type: '2 min', maxMinutes: 2, sensorId: 'SENSOR_006', location: 'Level 2' },
+    { id: 7, number: 'B03', type: '5 min', maxMinutes: 5, sensorId: 'SENSOR_007', location: 'Level 2' },
+    { id: 8, number: 'B04', type: '5 min', maxMinutes: 5, sensorId: 'SENSOR_008', location: 'Level 2' }
 ];
 
 // State Management
@@ -283,7 +283,7 @@ function renderBays() {
         }
 
         const card = `
-            <div class="col-6 col-md-3">
+            <div class="col-6 col-md-3 mb-4">
                 <div class="card bay-card ${statusClass} h-100" onclick="toggleBay(${bay.id})">
                     <div class="status-dot"></div>
                     <div class="mb-1 text-muted small fw-bold">
@@ -605,7 +605,7 @@ function updateActiveSessionsTable() {
                 <td class="text-muted">${bay.location}</td>
                 <td>${timeIn}</td>
                 <td>${durationStr}</td>
-                <td class="text-muted">Sedan</td> <!-- Using static vehicle type to match mockup -->
+                <td class="text-muted">${bay.type}</td>
                 <td>
                     <span class="badge badge-pill text-white" style="background-color: ${isViolation ? 'var(--accent-danger)' : 'var(--accent-primary)'}; border-radius: 20px; padding: 6px 14px; font-weight: 500;">
                         ${isViolation ? 'Violation' : 'Occupied'}
